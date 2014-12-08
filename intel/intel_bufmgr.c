@@ -84,6 +84,16 @@ drm_intel_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 				      tiling_mode, pitch, flags);
 }
 
+drm_public drm_intel_bo *
+drm_intel_bo_alloc_tr_mode(drm_intel_bufmgr *bufmgr, const char *name,
+                           int x, int y, int cpp, uint32_t *tiling_mode,
+                           uint32_t *tr_mode, unsigned long *pitch,
+                           unsigned long flags)
+{
+	return bufmgr->bo_alloc_tiled(bufmgr, name, x, y, cpp,
+				      tiling_mode, tr_mode, pitch, flags);
+}
+
 drm_public void
 drm_intel_bo_reference(drm_intel_bo *bo)
 {
