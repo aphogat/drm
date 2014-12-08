@@ -38,6 +38,12 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define I915_TRMODE_NONE        0
+#define I915_TRMODE_4K          1
+#define I915_TRMODE_64K         2
+#define I915_TRMODE_YF          1
+#define I915_TRMODE_YS          2
+
 struct drm_clip_rect;
 
 typedef struct _drm_intel_bufmgr drm_intel_bufmgr;
