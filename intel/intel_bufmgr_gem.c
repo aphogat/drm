@@ -281,13 +281,19 @@ static void drm_intel_gem_bo_free(drm_intel_bo *bo);
 
 static unsigned long
 drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
-			   uint32_t *tiling_mode)
+			   uint32_t *tiling_mode, uint32_t *tr_mode)
 {
 	unsigned long min_size, max_size;
 	unsigned long i;
 
 	if (*tiling_mode == I915_TILING_NONE)
 		return size;
+
+	/* Tiled surface base addresses must be tile aligned (64KB aligned
+	 * for TileYS, 4KB aligned for all other tile modes).
+	 */
+	if (*tr_mode == I915_TRMODE_YS)
+		return ROUND_UP_TO(size, 64 * 1024);
 
 	/* 965+ just need multiples of page size for tiling */
 	if (bufmgr_gem->gen >= 4)
@@ -304,6 +310,7 @@ drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
 
 	if (size > max_size) {
 		*tiling_mode = I915_TILING_NONE;
+		*tr_mode = I915_TRMODE_NONE;
 		return size;
 	}
 
@@ -852,7 +859,8 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 						     tile_width,
 						     tiling_mode, tr_mode);
 		size = stride * aligned_y;
-		size = drm_intel_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
+		size = drm_intel_gem_bo_tile_size(bufmgr_gem, size,
+						  tiling_mode, tr_mode);
 	} while (*tiling_mode != tiling);
 	*pitch = stride;
 
