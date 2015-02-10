@@ -324,9 +324,9 @@ drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
  */
 static unsigned long
 drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
-			    unsigned long pitch, uint32_t *tiling_mode)
+			    unsigned long pitch, unsigned long tile_width,
+			    uint32_t *tiling_mode)
 {
-	unsigned long tile_width;
 	unsigned long i;
 
 	/* If untiled, then just align it so that we can do rendering
@@ -334,13 +334,6 @@ drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
 	 */
 	if (*tiling_mode == I915_TILING_NONE)
 		return ALIGN(pitch, 64);
-
-	if (*tiling_mode == I915_TILING_X
-			|| (IS_915(bufmgr_gem->pci_device)
-			    && *tiling_mode == I915_TILING_Y))
-		tile_width = 512;
-	else
-		tile_width = 128;
 
 	/* 965 is flexible */
 	if (bufmgr_gem->gen >= 4)
@@ -816,7 +809,7 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			     unsigned long *pitch, unsigned long flags)
 {
 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
-	unsigned long size, stride;
+	unsigned long size, stride, tile_width;
 	uint32_t tiling;
 
 	do {
@@ -842,14 +835,18 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			height_alignment = 16;
 		else if (tiling == I915_TILING_X
 			|| (IS_915(bufmgr_gem->pci_device)
-			    && tiling == I915_TILING_Y))
+			    && tiling == I915_TILING_Y)) {
 			height_alignment = 8;
-		else if (tiling == I915_TILING_Y)
+			tile_width = 512;
+		} else if (tiling == I915_TILING_Y)
 			height_alignment = 32;
+			tile_width = 128;
+		}
 		aligned_y = ALIGN(y, height_alignment);
 
 		stride = x * cpp;
-		stride = drm_intel_gem_bo_tile_pitch(bufmgr_gem, stride, tiling_mode);
+		stride = drm_intel_gem_bo_tile_pitch(bufmgr_gem, stride,
+						     tile_width, tiling_mode);
 		size = stride * aligned_y;
 		size = drm_intel_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
 	} while (*tiling_mode != tiling);
