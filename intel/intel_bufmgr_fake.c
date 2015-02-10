@@ -847,6 +847,7 @@ drm_intel_fake_bo_alloc_tiled(drm_intel_bufmgr * bufmgr,
 			      const char *name,
 			      int x, int y, int cpp,
 			      uint32_t *tiling_mode,
+			      uint32_t *tr_mode,
 			      unsigned long *pitch,
 			      unsigned long flags)
 {
@@ -854,6 +855,7 @@ drm_intel_fake_bo_alloc_tiled(drm_intel_bufmgr * bufmgr,
 
 	/* No runtime tiling support for fake. */
 	*tiling_mode = I915_TILING_NONE;
+	*tr_mode = I915_TRMODE_NONE;
 
 	/* Align it for being a render target.  Shouldn't need anything else. */
 	stride = x * cpp;

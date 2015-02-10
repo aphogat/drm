@@ -83,6 +83,12 @@ struct _drm_intel_bufmgr {
 	 *  I915_TILING_NONE
 	 *  I915_TILING_X
 	 *  I915_TILING_Y
+	 * Valid tile resource modes are:
+	 *  I915_TRMODE_NONE
+	 *  I915_TRMODE_YF
+	 *  I915_TRMODE_YS
+	 *  I915_TRMODE_4K
+	 *  I915_TRMODE_64K
 	 *
 	 * Note the tiling format may be rejected; callers should check the
 	 * 'tiling_mode' field on return, as well as the pitch value, which
@@ -92,6 +98,7 @@ struct _drm_intel_bufmgr {
 					 const char *name,
 					 int x, int y, int cpp,
 					 uint32_t *tiling_mode,
+					 uint32_t *tr_mode,
 					 unsigned long *pitch,
 					 unsigned long flags);
 

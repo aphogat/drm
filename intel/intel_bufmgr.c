@@ -80,8 +80,10 @@ drm_intel_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
                         int x, int y, int cpp, uint32_t *tiling_mode,
                         unsigned long *pitch, unsigned long flags)
 {
+	uint32_t tr_mode = I915_TRMODE_NONE;
 	return bufmgr->bo_alloc_tiled(bufmgr, name, x, y, cpp,
-				      tiling_mode, pitch, flags);
+				      tiling_mode, &tr_mode,
+				      pitch, flags);
 }
 
 drm_public drm_intel_bo *

@@ -806,7 +806,8 @@ drm_intel_gem_bo_alloc(drm_intel_bufmgr *bufmgr,
 static drm_intel_bo *
 drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			     int x, int y, int cpp, uint32_t *tiling_mode,
-			     unsigned long *pitch, unsigned long flags)
+			     uint32_t *tr_mode, unsigned long *pitch,
+			     unsigned long flags)
 {
 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
 	unsigned long size, stride, tile_width;
