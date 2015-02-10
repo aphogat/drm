@@ -803,6 +803,39 @@ drm_intel_gem_bo_alloc(drm_intel_bufmgr *bufmgr,
 					       I915_TILING_NONE, 0);
 }
 
+/* This function does tile height computations valid only for Yf/Ys tiled
+ * surfaces.
+ */
+static unsigned
+drm_intel_gem_tile_height(unsigned bpp, uint32_t tiling)
+{
+	unsigned tile_height;
+	assert(tiling == I915_TILING_YF || tiling == I915_TILING_YS);
+
+	switch (bpp) {
+	case 8:
+		tile_height = 64;
+		break;
+	case 16:
+	case 32:
+		tile_height = 32;
+		break;
+	case 64:
+	case 128:
+		tile_height = 16;
+		break;
+	default:
+		printf("Invalid bits per pixel in %s: bpp = %d\n",
+		       __FUNCTION__, bpp);
+		return 0;
+	}
+
+	if (tiling == I915_TILING_YS)
+		tile_height *= 4;
+
+	return tile_height;
+}
+
 static drm_intel_bo *
 drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			     int x, int y, int cpp, uint32_t *tiling_mode,
@@ -838,7 +871,15 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			    && tiling == I915_TILING_Y)) {
 			height_alignment = 8;
 			tile_width = 512;
-		} else if (tiling == I915_TILING_Y)
+		} else if (tiling == I915_TILING_YF ||
+			   tiling == I915_TILING_YS) {
+			unsigned bpp = cpp * 8;
+			unsigned aspect_ratio =
+				(bpp == 16 || bpp == 64) ? 2 : 1;
+			height_alignment =
+				drm_intel_gem_tile_height(bpp, tiling);
+			tile_width = height_alignment * cpp * aspect_ratio;
+		} else if (tiling == I915_TILING_Y){
 			height_alignment = 32;
 			tile_width = 128;
 		}
@@ -854,6 +895,12 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 
 	if (tiling == I915_TILING_NONE)
 		stride = 0;
+
+	/* Use I915_TILING_Y in drm_intel_gem_bo_alloc_internal() in case of
+	 * YF/YS tiling.
+	 */
+	tiling = (tiling == I915_TILING_YF || tiling == I915_TILING_YS) ?
+		  I915_TILING_Y : tiling;
 
 	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, flags,
 					       tiling, stride);
