@@ -325,7 +325,8 @@ drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
 static unsigned long
 drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
 			    unsigned long pitch, unsigned long tile_width,
-			    uint32_t *tiling_mode)
+			    uint32_t *tiling_mode,
+			    uint32_t *tr_mode)
 {
 	unsigned long i;
 
@@ -344,6 +345,7 @@ drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
 	 */
 	if (pitch > 8192) {
 		*tiling_mode = I915_TILING_NONE;
+		*tr_mode = I915_TRMODE_NONE;
 		return ALIGN(pitch, 64);
 	}
 
@@ -847,7 +849,8 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 
 		stride = x * cpp;
 		stride = drm_intel_gem_bo_tile_pitch(bufmgr_gem, stride,
-						     tile_width, tiling_mode);
+						     tile_width,
+						     tiling_mode, tr_mode);
 		size = stride * aligned_y;
 		size = drm_intel_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
 	} while (*tiling_mode != tiling);
