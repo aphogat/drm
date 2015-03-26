@@ -289,8 +289,13 @@ drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
 	if (*tiling_mode == I915_TILING_NONE)
 		return size;
 
+	/* Tiled surface base addresses must be tile aligned (64KB aligned
+	 * for TileYS, 4KB aligned for all other tile modes).
+	 */
+	if (*tiling_mode == I915_TILING_YS)
+		return ROUND_UP_TO(size, 64 * 1024);
 	/* 965+ just need multiples of page size for tiling */
-	if (bufmgr_gem->gen >= 4)
+	else if (bufmgr_gem->gen >= 4)
 		return ROUND_UP_TO(size, 4096);
 
 	/* Older chips need powers of two, of at least 512k or 1M */
