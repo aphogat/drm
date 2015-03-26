@@ -291,6 +291,8 @@ drm_intel_gem_bo_tile_size(drm_intel_bufmgr_gem *bufmgr_gem, unsigned long size,
 
 	/* Tiled surface base addresses must be tile aligned (64KB aligned
 	 * for TileYS, 4KB aligned for all other tile modes).
+	 * TODO: Add the exception for alignment rules from BSpec:
+	 * 'Address Tiling Function Introduction' section.
 	 */
 	if (*tiling_mode == I915_TILING_YS)
 		return ROUND_UP_TO(size, 64 * 1024);
@@ -346,6 +348,7 @@ drm_intel_gem_bo_tile_pitch(drm_intel_bufmgr_gem *bufmgr_gem,
 
 	/* The older hardware has a maximum pitch of 8192 with tiled
 	 * surfaces, so fallback to untiled if it's too large.
+	 * TODO: Need any change here for YF and YS tr_mode on Skylake?
 	 */
 	if (pitch > 8192) {
 		*tiling_mode = I915_TILING_NONE;
@@ -847,11 +850,12 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			     unsigned long *pitch, unsigned long flags)
 {
 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *)bufmgr;
-	unsigned long size, stride, tile_width;
+	unsigned long size, stride, tile_width = 0;
 	uint32_t tiling;
 
 	do {
 		unsigned long aligned_y, height_alignment;
+		const char *tiling_str = "I915_TILING_NONE";
 
 		tiling = *tiling_mode;
 
@@ -876,6 +880,7 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			    && tiling == I915_TILING_Y)) {
 			height_alignment = 8;
 			tile_width = 512;
+			tiling_str = "I915_TILING_X";
 		} else if (tiling == I915_TILING_YF ||
 			   tiling == I915_TILING_YS) {
 			unsigned bpp = cpp * 8;
@@ -884,9 +889,13 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 			height_alignment =
 				drm_intel_gem_tile_height(bpp, tiling);
 			tile_width = height_alignment * cpp * aspect_ratio;
+			tiling_str = tiling == I915_TILING_YF ?
+					       "I915_TILING_YF" :
+					       "I915_TILING_YS";
 		} else if (tiling == I915_TILING_Y){
 			height_alignment = 32;
 			tile_width = 128;
+			tiling_str = "I915_TILING_Y";
 		}
 		aligned_y = ALIGN(y, height_alignment);
 
@@ -895,11 +904,19 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 						     tile_width, tiling_mode);
 		size = stride * aligned_y;
 		size = drm_intel_gem_bo_tile_size(bufmgr_gem, size, tiling_mode);
+		printf("%s: %s, tile_width = %ld, tile_height = %ld, bo_pitch = %ld, ",
+			__FUNCTION__, tiling_str, tile_width, height_alignment, stride);
 	} while (*tiling_mode != tiling);
 	*pitch = stride;
 
-	if (tiling == I915_TILING_NONE)
-		stride = 0;
+	/* The kernel enforces a strie of 0 for gem buffer that don't have hw
+         * support to be tiled/detiled through a fenced region.
+         * FIXME: Discuss this with Damien.
+         */
+       if (tiling == I915_TILING_NONE /*||
+           tiling == I915_TILING_YF ||
+	   tiling == I915_TILING_YS*/)
+                stride = 0;
 
 	/* Use I915_TILING_Y in drm_intel_gem_bo_alloc_internal() in case of
 	 * YF/YS tiling.
@@ -907,6 +924,7 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 	tiling = (tiling == I915_TILING_YF || tiling == I915_TILING_YS) ?
 		  I915_TILING_Y : tiling;
 
+	printf("bo_size = %ld\n", size);
 	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, flags,
 					       tiling, stride);
 }
