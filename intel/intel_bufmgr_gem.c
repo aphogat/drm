@@ -660,7 +660,8 @@ drm_intel_gem_bo_alloc_internal(drm_intel_bufmgr *bufmgr,
 				unsigned long size,
 				unsigned long flags,
 				uint32_t tiling_mode,
-				unsigned long stride)
+				unsigned long stride,
+				unsigned int alignment)
 {
 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bufmgr;
 	drm_intel_bo_gem *bo_gem;
@@ -700,9 +701,14 @@ retry:
 			 */
 			bo_gem = DRMLISTENTRY(drm_intel_bo_gem,
 					      bucket->head.prev, head);
-			DRMLISTDEL(&bo_gem->head);
-			alloc_from_cache = true;
+			if (alignment > 0 && bo_gem->bo.align != alignment) {
+				alloc_from_cache = false;
+			} else {
+				alloc_from_cache = true;
+				DRMLISTDEL(&bo_gem->head);
+			}
 		} else {
+			assert(alignment == 0);
 			/* For non-render-target BOs (where we're probably
 			 * going to map it first thing in order to fill it
 			 * with data), check if the last BO in the cache is
@@ -759,6 +765,7 @@ retry:
 			return NULL;
 		}
 		bo_gem->bo.bufmgr = bufmgr;
+		bo_gem->bo.align = alignment;
 
 		bo_gem->tiling_mode = I915_TILING_NONE;
 		bo_gem->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
@@ -802,7 +809,8 @@ drm_intel_gem_bo_alloc_for_render(drm_intel_bufmgr *bufmgr,
 {
 	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size,
 					       BO_ALLOC_FOR_RENDER,
-					       I915_TILING_NONE, 0);
+					       I915_TILING_NONE, 0,
+					       alignment);
 }
 
 static drm_intel_bo *
@@ -812,7 +820,7 @@ drm_intel_gem_bo_alloc(drm_intel_bufmgr *bufmgr,
 		       unsigned int alignment)
 {
 	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, 0,
-					       I915_TILING_NONE, 0);
+					       I915_TILING_NONE, 0, 0);
 }
 
 static drm_intel_bo *
@@ -864,7 +872,7 @@ drm_intel_gem_bo_alloc_tiled(drm_intel_bufmgr *bufmgr, const char *name,
 		stride = 0;
 
 	return drm_intel_gem_bo_alloc_internal(bufmgr, name, size, flags,
-					       tiling, stride);
+					       tiling, stride, 0);
 }
 
 static drm_intel_bo *
